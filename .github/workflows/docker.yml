@@ -1,0 +1,47 @@
+name: 'Build & Push Docker Image'
+
+on:
+  schedule:
+    - cron: "0 0 * * 0" # Every Sunday
+  workflow_dispatch:
+
+env:
+  CI: true
+  DOCKER_BUILDKIT: 1
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Build Image
+        run: |
+          # Build Docker Image for DockerHub
+          docker build --tag mamba-9mm/phishing:latest .
+
+          # Tag Docker Image for GHCR
+          docker tag mamba-9mm/phishing:latest ghcr.io/mamba-9mm/phishing:latest
+
+      - name: Login to GHCR
+        if: github.repository == 'mamba-9mm/phishing&& github.ref == 'refs/heads/master'
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Login to DockerHub
+        if: github.repository == 'mamba-9mm/phishing&& github.ref == 'refs/heads/master'
+        uses: docker/login-action@v2
+        with:
+          username: "mamba-9mm"
+          password: ${{ secrets.DOCKER_TOKEN }}
+
+      - name: Push
+        if: github.repository == 'mamba-9mm/phishing&& github.ref == 'refs/heads/master'
+        run: |
+          # Push to DockerHub
+          docker push mamba-9mm/phishing:latest
+          # Push to GHCR
+          docker push ghcr.io/mamba-9mm/phishing:latest
